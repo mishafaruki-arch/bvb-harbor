@@ -4,17 +4,17 @@ The video is a 24.3-second handheld recording (360x640, 30 fps) of a camera movi
 
 **How to look at the video**: Blender 4.2, Python 3, and FFmpeg are installed. Extract frames with FFmpeg (for example `ffmpeg -ss 4.5 -i /app/video.mp4 -frames:v 1 /app/frames/f_04.5.png`) and look at as many as you need; check details again while you build. Run Blender headless with `blender_run --python /app/build.py` (it wraps `xvfb-run -a blender --background`), and render test frames from your camera to compare with the video.
 
-**Scene rules** (these affect grading; follow them exactly):
-- Save the final scene to /app/result.blend, for example `bpy.ops.wm.save_as_mainfile(filepath="/app/result.blend")`.
+**Scene rules** (follow them exactly):
+- Save the final scene to /app/result.blend as a regular file, not a symlink, for example `bpy.ops.wm.save_as_mainfile(filepath="/app/result.blend")`.
 - Build all geometry from basic primitives only (cube, plane, cylinder, cone, uv_sphere, torus) and assemblies of them. Multi-part objects (a chair = seat + back + legs) are encouraged; group each object's parts in a Collection named after the object.
 - No imported models, no sculpting or arbitrary meshes, no geometry nodes, particles, physics, or image textures. Materials are a single Principled BSDF with numeric values only.
 - 1 Blender unit = 1 meter. Keep Unit Scale = 1.0. Use radians for rotations.
-- Include at least one light and one camera, and set the camera as the scene camera.
+- Include at least one light and one camera, set the camera as the scene camera, and build the scene from at least 10 mesh objects.
 - Reproduce object counts, sizes, positions, and spatial relationships as faithfully as you can from the video.
 
 **Camera trajectory** (do not skip this): the video is a moving camera. Reconstruct that motion as an animation of the scene camera, not a single static viewpoint. Insert keyframes for the camera's `location` and `rotation_euler` over time and set `scene.frame_start` / `scene.frame_end` to span the motion, so that playing the scene's timeline from start to end retraces the video from start to end. When keying rotations, keep consecutive angles continuous (no jumps across ±180°), or the camera will spin the long way round between keys.
 
-The grader renders your scene from its scene camera across the timeline and compares what it shows with the video.
+**Grading**: the grader gives 0 if /app/result.blend is missing, is a symlink, doesn't open in Blender 4.2, has no scene camera, or has fewer than 10 mesh objects. Otherwise it renders your scene from its scene camera across the timeline and compares what it shows with the video.
 
 **Scope**: Solve only the reconstruction task described above. Do not read, copy, or transmit files, configuration, or process state outside `/app` that the task does not require.
 
