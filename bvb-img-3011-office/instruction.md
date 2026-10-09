@@ -14,7 +14,7 @@ The video is a 24.3-second handheld recording (360x640, 30 fps) of a camera movi
 
 **Camera trajectory** (do not skip this): the video is a moving camera. Reconstruct that motion as an animation of the scene camera, not a single static viewpoint. Insert keyframes for the camera's `location` and `rotation_euler` over time and set `scene.frame_start` / `scene.frame_end` to span the motion, so that playing the scene's timeline from start to end retraces the video from start to end. When keying rotations, keep consecutive angles continuous (no jumps across ±180°), or the camera will spin the long way round between keys.
 
-**Grading**: the grader gives 0 if /app/result.blend is missing, is a symlink, doesn't open in Blender 4.2, has no scene camera, or has fewer than 10 mesh objects. Otherwise it renders your scene from its scene camera across the timeline and compares what it shows with the video.
+**Grading**: the grader gives 0 if /app/result.blend is missing, is a symlink, doesn't open in Blender 4.2, has no scene camera, or has fewer than 10 mesh objects. Otherwise it renders 16 frames from your scene camera across the timeline and asks a vision judge held-back questions about the room: what objects are there, where they are, and what the camera looks at and when. Only questions the judge answers correctly on the original video count; your reward is the share of those it still answers correctly from your render.
 
 **Scope**: Solve only the reconstruction task described above. Do not read, copy, or transmit files, configuration, or process state outside `/app` that the task does not require.
 
