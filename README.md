@@ -24,15 +24,26 @@ LICENSE-BVB               license for the BVB scoring code copied into template/
 
 ## Run the office task
 
-You need Docker, Harbor (`harbor`), and an OpenAI API key for the judge.
+You need Docker, Harbor (`harbor`), an OpenAI API key for the judge, and a key for the agent's model.
+Docker builds Blender and everything else inside the task's containers.
 
 ```bash
-export OPENAI_API_KEY=...                                  # read by the verifier
+export OPENAI_API_KEY=...                                  # read by the verifier (judge)
 harbor run -y -p bvb-img-3011-office -a oracle -o jobs     # the golden solution
 harbor run -y -p bvb-img-3011-office -a nop -o jobs        # an empty submission
-harbor run -y -p bvb-img-3011-office -a claude-code -m anthropic/claude-opus-5-5 \
-  --allow-agent-host api.anthropic.com -o jobs             # a real agent
+
+# Kimi K3 through the Vercel AI Gateway, as in results/kimi-k3
+export VERCEL_AI_GATEWAY_API_KEY=...
+harbor run -y -p bvb-img-3011-office -a kimi-code -m moonshotai/kimi-k3 \
+  --allow-agent-host ai-gateway.vercel.sh \
+  --ae 'KIMI_MODEL_BASE_URL=https://ai-gateway.vercel.sh/v1' \
+  --ae 'KIMI_MODEL_API_KEY=${VERCEL_AI_GATEWAY_API_KEY}' \
+  --ae KIMI_MODEL_MAX_CONTEXT_SIZE=1000000 --ae KIMI_MODEL_CAPABILITIES=image_in,thinking \
+  --ae KIMI_MODEL_THINKING_EFFORT=high --ae KIMI_CODE_EXPERIMENTAL_FLAG=true -o jobs
 ```
+
+Any Harbor agent that can view image files works the same way: allow its model's API host with
+`--allow-agent-host`. `-y` skips Harbor's prompt before it passes `OPENAI_API_KEY` to the verifier.
 
 Each trial's verifier output is in `jobs/<job>/<trial>/verifier/`:
 
@@ -57,11 +68,34 @@ judge; an earlier full Harbor run of the golden, with the first question wording
 scored 0.83. A full agent run plus grading takes about 3 hours on an Apple Silicon Mac, which
 renders under emulation.
 
+## Environment
+
+Each run uses two containers, both built from the task's Dockerfiles. Both are linux/amd64,
+because Blender's Linux build is x86-64 only.
+
+| | Agent container (`environment/`) | Verifier container (`tests/`) |
+|---|---|---|
+| Base | Ubuntu 22.04 | Ubuntu 22.04 |
+| Software | Blender 4.2.0, Xvfb + xauth, FFmpeg, Mesa EGL (headless EEVEE), Python 3 with numpy and Pillow, a `blender_run` helper | Blender 4.2.0, Xvfb + xauth, FFmpeg, Mesa EGL, Python 3 with `openai` 2.54.0 and `opencv-python-headless` 4.11.0.86 |
+| Contents | The video at `/app/video.mp4` | The grader, questions, and source answers at `/opt/grader`; `test.sh` at `/tests` |
+| Network | None, except the model API host passed with `--allow-agent-host` | Only `api.openai.com`, for the judge |
+| Secrets | The agent's model key, passed by the run command | `OPENAI_API_KEY`, passed from the host by `task.toml` |
+| Time limit | 60 min | 120 min (rendering is slow without a GPU) |
+
+The task's `task.toml` also sets 2 CPUs, 4 GB of memory, 10 GB of storage, no GPU, and a 60-minute
+image build limit. The agent never sees the verifier container; Harbor copies only
+`/app/result.blend` into it.
+
+**On Apple Silicon** the containers run under emulation with software rendering. A full agent run
+plus grading takes about 3 hours, mostly rendering at about 5 minutes per frame. On an x86 machine
+the same run is far faster.
+
 ## How a task is graded
 
-The agent gets the video at `/app/video.mp4` in a container with Blender 4.2, Python, and FFmpeg,
-and must save `/app/result.blend`. The scene has to be built from Blender primitives, with a scene
-camera keyed to retrace the video's camera path. The full rules are in the task's `instruction.md`.
+The agent gets the video at `/app/video.mp4` and must save `/app/result.blend`. The scene has to be
+built from Blender primitives, with a scene camera keyed to retrace the video's camera path. The
+task's `instruction.md` gives the full rules and also tells the agent how it is graded: the gates
+below, and that a vision judge answers held-back questions about the room from 16 rendered frames.
 
 The verifier runs in a separate container that the agent never sees. It holds the questions, the
 judge's answers on the source video, and the grader:
@@ -93,7 +127,7 @@ This is a Harbor task *based on* BVB. Its rewards aren't comparable to the BVB l
 | Questions | 5,130 VSI-Bench questions over 288 videos | 15 author-written questions for one video |
 | Score | Overall = sqrt-mean of Dual VQA and Latent Similarity (V-JEPA) | Dual VQA retention only |
 | Judge | 1 answer per question | Majority of 5 answers per question |
-| Instructions | Mini-BVB system prompt | Same scene rules, plus a note to keep camera angles continuous across ±180° |
+| Instructions | Mini-BVB system prompt; the agent isn't told how it's scored | Same scene rules, plus a note to keep camera angles continuous across ±180°, and a description of the grader's gates and scoring method |
 
 Latent Similarity is left out on purpose. On the office video it rated two unrelated real videos
 (80.9 and 86.4) above Kimi K3's reconstruction of the right room (71.1). It also needs a 7.6 GB
