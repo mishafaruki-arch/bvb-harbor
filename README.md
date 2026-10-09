@@ -16,6 +16,8 @@ template/                 files every task shares (agent image, verifier image, 
 examples/
   office_questions.jsonl  the office task's 15 questions, as a format reference
   office_make_golden.py   the hand fixes that turned GPT-6 Astra's scene into the office golden
+results/
+  kimi-k3/                a full Harbor run of Kimi K3: score breakdown, judged frames, video, scene
 requirements.txt          Python packages for make_task.py
 LICENSE-BVB               license for the BVB scoring code copied into template/ and each task
 ```
@@ -45,13 +47,15 @@ Each trial's verifier output is in `jobs/<job>/<trial>/verifier/`:
 |---|---|
 | Golden solution (oracle) | 1.00 (11 of 11 counted questions) |
 | GPT-6 Astra (high), unedited scene | 0.91 |
-| Kimi K3 (high) | 0.55 |
+| Kimi K3 (`kimi-code` agent), [full results](results/kimi-k3) | 0.55 (6 of 11) |
 | No submission (`nop`) | 0.00 |
 
-The empty-submission result and an earlier golden run (0.83 with the first question wording and 3
-judge votes) came from full Harbor runs. The other numbers come from grading saved renders with
-the task's final questions and 5-vote judge. A full Harbor run with the final settings takes over
-an hour on an Apple Silicon Mac, which renders under emulation.
+Kimi K3 and the empty submission are full Harbor runs with the final settings: the agent built its
+scene from scratch in the task's container and the task's verifier graded it. The golden's 1.00 and
+the GPT-6 Astra score come from grading saved renders with the task's final questions and 5-vote
+judge; an earlier full Harbor run of the golden, with the first question wording and 3 votes,
+scored 0.83. A full agent run plus grading takes about 3 hours on an Apple Silicon Mac, which
+renders under emulation.
 
 ## How a task is graded
 
