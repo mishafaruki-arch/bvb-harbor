@@ -56,3 +56,4 @@ WORKDIR /app
 COPY grader/ /opt/grader/
 # Harbor runs /tests/test.sh in the verifier container.
 COPY . /tests/
+RUN chmod +x /tests/test.sh
